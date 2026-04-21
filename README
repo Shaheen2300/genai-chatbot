@@ -1,3 +1,106 @@
-## Features
-- CLI-based chatbot using OpenAI API
-- Secure API key handling with .env
+# GenAI Chatbot (Streamlit + OpenAI)
+
+A web-based AI chatbot built using Python, Streamlit, and OpenAI API.
+This project demonstrates how to integrate Large Language Models (LLMs) into a real-time interactive application.
+
+---
+
+##  Features
+
+* Interactive chatbot UI (Streamlit)
+* Powered by OpenAI GPT model
+* Secure API key management using `.env`
+* Chat history with session memory
+* Real-time responses
+
+---
+
+## Tech Stack
+
+* Python
+* Streamlit
+* OpenAI API
+* python-dotenv
+
+---
+
+## Demo
+
+Run locally:
+
+```bash
+streamlit run app.py
+```
+
+---
+
+## Project Structure
+
+```
+genai-project/
+│── app.py          # Streamlit UI chatbot
+│── chatbot.py      # CLI version
+│── .env            # API key (not pushed)
+│── .gitignore      # ignored files
+│── README.md       # project documentation
+```
+
+---
+
+## Setup Instructions
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/yourusername/genai-chatbot.git
+cd genai-chatbot
+```
+
+2. Create virtual environment:
+
+```bash
+python -m venv venv
+venv\Scripts\activate   # Windows
+```
+
+3. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+4. Add your OpenAI API key in `.env`:
+
+```
+OPENAI_API_KEY=your_key_here
+```
+
+5. Run the app:
+
+```bash
+streamlit run app.py
+```
+
+---
+
+## What I Learned
+
+* How to integrate OpenAI API with Python
+* Building interactive UI using Streamlit
+* Managing secrets securely with environment variables
+* Handling session-based chat memory
+
+---
+
+## Future Improvements
+
+* Add file upload support (PDF chat – RAG)
+* Deploy on cloud (Streamlit Cloud / AWS)
+* Add multi-user chat support
+
+---
+
+## Author
+
+Shaheen Memon
+MS Data Science | Business Analytics
