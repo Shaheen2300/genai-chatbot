@@ -1,0 +1,3 @@
+## Features
+- CLI-based chatbot using OpenAI API
+- Secure API key handling with .env
