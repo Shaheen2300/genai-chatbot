@@ -104,3 +104,11 @@ streamlit run app.py
 
 Shaheen Memon
 MS Data Science | Business Analytics
+
+## RAG Implementation
+
+- Built Retrieval-Augmented Generation from scratch
+- Implemented embeddings using OpenAI
+- Designed similarity search using cosine similarity
+- Retrieved top-k relevant documents
+- Generated grounded responses using LLM
