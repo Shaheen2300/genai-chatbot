@@ -5,7 +5,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 # Load API key
-load_dotenv()
+load_dotenv(dotenv_path=".env")
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Page config
