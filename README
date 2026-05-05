@@ -1,114 +1,122 @@
-# GenAI Chatbot (Streamlit + OpenAI)
+#  AI Document Assistant (Conversational RAG)
 
-A web-based AI chatbot built using Python, Streamlit, and OpenAI API.
-This project demonstrates how to integrate Large Language Models (LLMs) into a real-time interactive application.
+An intelligent multi-document chatbot that allows users to upload PDFs and interact with them using natural language.
+The system uses Retrieval-Augmented Generation (RAG) with conversational memory to provide accurate, context-aware responses.
 
 ---
 
 ##  Features
 
-* Interactive chatbot UI (Streamlit)
-* Powered by OpenAI GPT model
-* Secure API key management using `.env`
-* Chat history with session memory
-* Real-time responses
+*  Upload and chat with multiple PDFs
+*  Conversational memory (context-aware follow-up questions)
+*  Smart retrieval using FAISS vector database
+*  Query rewriting for better understanding of user intent
+*  Source-aware answers (tracks which document information comes from)
+*  Improved retrieval using MMR (Max Marginal Relevance)
+*  Full document summarization mode
 
 ---
 
-## Tech Stack
+##  How It Works
+
+```text
+PDFs → Chunking → Embeddings → FAISS Vector Store
+→ Query Rewriting → Smart Retrieval (MMR)
+→ LLM (ChatGPT) → Context-Aware Answer
+```
+
+---
+
+##  Tech Stack
 
 * Python
 * Streamlit
+* LangChain
 * OpenAI API
-* python-dotenv
+* FAISS (Vector Database)
 
 ---
 
-## Demo
-
-Run locally:
-
-```bash
-streamlit run app.py
-```
-
----
-
-## Project Structure
-
-```
-genai-project/
-│── app.py          # Streamlit UI chatbot
-│── chatbot.py      # CLI version
-│── .env            # API key (not pushed)
-│── .gitignore      # ignored files
-│── README.md       # project documentation
-```
-
----
-
-## Setup Instructions
+##  Installation
 
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/genai-chatbot.git
-cd genai-chatbot
+git clone https://github.com/your-username/your-repo-name.git
+cd your-repo-name
 ```
 
-2. Create virtual environment:
-
-```bash
-python -m venv venv
-venv\Scripts\activate   # Windows
-```
-
-3. Install dependencies:
+2. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Add your OpenAI API key in `.env`:
-
-```
-OPENAI_API_KEY=your_key_here
-```
-
-5. Run the app:
+3. Create a `.env` file and add your OpenAI API key:
 
 ```bash
-streamlit run app.py
+OPENAI_API_KEY=your_api_key_here
+```
+
+4. Run the app:
+
+```bash
+streamlit run ragapp.py
 ```
 
 ---
 
-## What I Learned
+##  Usage
 
-* How to integrate OpenAI API with Python
-* Building interactive UI using Streamlit
-* Managing secrets securely with environment variables
-* Handling session-based chat memory
+1. Upload one or more PDF files
+2. Ask questions about the documents
+3. Ask follow-up questions (conversation is remembered)
+4. Use queries like:
 
----
-
-## Future Improvements
-
-* Add file upload support (PDF chat – RAG)
-* Deploy on cloud (Streamlit Cloud / AWS)
-* Add multi-user chat support
+   * "Summarize this document"
+   * "What are the key findings?"
+   * "Explain that in simple terms"
+   * "What is common between both PDFs?"
 
 ---
 
-## Author
+##  Key Improvements
+
+* Fixed stale embedding issues by rebuilding vector store per upload
+* Improved retrieval quality using MMR search
+* Added conversational memory for follow-up queries
+* Implemented query rewriting for better context understanding
+
+---
+
+##  Limitations
+
+* Performance depends on chunking and retrieval quality
+* Very large PDFs may require optimization
+* Responses are limited to retrieved context
+
+---
+
+##  Future Improvements
+
+* Highlight exact answer spans in documents
+* Add confidence scores for retrieval
+* Deploy on cloud for public access
+* Add tool-based agent capabilities
+
+---
+
+##  Project Purpose
+
+This project demonstrates the design and implementation of a real-world AI system using RAG architecture.
+It showcases practical skills in LLM integration, vector search, and conversational AI.
+
+---
+
+##  Author
 
 Shaheen Memon
-MS Data Science | Business Analytics
+MS in Data Science (Business Analytics Track)
+University of West Florida
 
-## RAG Implementation
-
-- Built Retrieval-Augmented Generation from scratch
-- Implemented embeddings using OpenAI
-- Designed similarity search using cosine similarity
-- Retrieved top-k relevant documents
-- Generated grounded responses using LLM
+---
