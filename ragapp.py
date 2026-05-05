@@ -1,6 +1,5 @@
-import os
-import hashlib
 import streamlit as st
+import tempfile
 from dotenv import load_dotenv
 
 from langchain_community.document_loaders import PyPDFLoader
@@ -10,96 +9,175 @@ from langchain_community.vectorstores import FAISS
 
 load_dotenv()
 
-st.set_page_config(page_title="Chat with PDF (RAG)", layout="wide")
-st.title("📄 Chat with Your PDF (RAG)")
+st.set_page_config(page_title="Smart RAG Chatbot", layout="wide")
+st.title("🤖 Smart Chat with PDFs")
 
+# -------------------------
+# Session State
+# -------------------------
 if "vectorstore" not in st.session_state:
     st.session_state.vectorstore = None
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-if "loaded_file_hash" not in st.session_state:
-    st.session_state.loaded_file_hash = None
 
-uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-if uploaded_file:
-    file_bytes = uploaded_file.read()
-    file_hash = hashlib.md5(file_bytes).hexdigest()
+# -------------------------
+# Upload PDFs
+# -------------------------
+uploaded_files = st.file_uploader(
+    "Upload PDFs",
+    type="pdf",
+    accept_multiple_files=True
+)
 
-    if file_hash != st.session_state.loaded_file_hash:
-        st.session_state.chat_history = []
-        st.session_state.vectorstore = None
-        st.session_state.loaded_file_hash = file_hash
+if uploaded_files:
+    all_docs = []
 
-        temp_path = f"temp_{file_hash}.pdf"
-        with open(temp_path, "wb") as f:
-            f.write(file_bytes)
+    with st.spinner("📄 Processing PDFs..."):
+        for uploaded_file in uploaded_files:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp.write(uploaded_file.read())
+                temp_path = tmp.name
 
-        with st.spinner("📄 Processing PDF..."):
             loader = PyPDFLoader(temp_path)
-            documents = loader.load()
+            docs = loader.load()
 
-            splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=50)
-            docs = splitter.split_documents(documents)
+            for d in docs:
+                d.metadata["source"] = uploaded_file.name
 
-            embeddings = OpenAIEmbeddings()
-            st.session_state.vectorstore = FAISS.from_documents(docs, embeddings)
-            os.remove(temp_path)
+            all_docs.extend(docs)
 
-        st.success(f"✅ '{uploaded_file.name}' loaded! ({len(docs)} chunks created)")
-    else:
-        st.info(f"📎 '{uploaded_file.name}' already loaded.")
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=400,
+        chunk_overlap=50
+    )
 
+    split_docs = splitter.split_documents(all_docs)
+
+    embeddings = OpenAIEmbeddings()
+    st.session_state.vectorstore = FAISS.from_documents(split_docs, embeddings)
+
+    st.session_state.messages = []
+    st.success("✅ PDFs processed!")
+
+# -------------------------
+# Chat Section
+# -------------------------
 if st.session_state.vectorstore:
+
+    retriever = st.session_state.vectorstore.as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": 8, "fetch_k": 20}
+    )
+
     llm = ChatOpenAI(model="gpt-4o-mini")
-    user_query = st.chat_input("Ask something about your document...")
+
+    user_query = st.chat_input("Ask anything about your documents...")
 
     if user_query:
+
+        # Save user message
+        st.session_state.messages.append({"role": "user", "content": user_query})
+
+        # Build conversation (last few messages only)
+        conversation = ""
+        for msg in st.session_state.messages[-6:]:
+            conversation += f"{msg['role']}: {msg['content']}\n"
+
         with st.spinner("🤔 Thinking..."):
 
-            docs_and_scores = st.session_state.vectorstore.similarity_search_with_score(user_query, k=3)
+            # -------------------------
+            # SUMMARY MODE
+            # -------------------------
+            if "summar" in user_query.lower():
 
-           
+                full_context = ""
+                for doc in st.session_state.vectorstore.docstore._dict.values():
+                    full_context += doc.page_content + "\n\n"
 
-            relevant_docs = [doc for doc, score in docs_and_scores if score < 0.5]
-            
-
-            if not relevant_docs:
-                answer = "I don't know based on the document."
-                context = ""
-            else:
-                context = "\n\n".join([doc.page_content for doc in relevant_docs])
-
-                # ── STRONGER prompt — explicitly walls off outside knowledge ──
                 response = llm.invoke(f"""
-You are a document-only assistant. You have NO knowledge of the world.
-You can ONLY use the text provided in the Context section below.
-You MUST NOT use any knowledge from your training.
-If the answer cannot be found word-for-word or by direct inference from the Context, 
-you MUST respond with exactly: "I don't know based on the document."
+Summarize the document clearly in bullet points.
 
-Context:
----
-{context}
----
+Focus on:
+- main topic
+- key findings
+- important results
+- conclusion
 
-Question: {user_query}
+Document:
+{full_context}
+""")
 
-Answer (ONLY from the Context above):""")
                 answer = response.content
 
-            st.session_state.chat_history.append(("You", user_query))
-            st.session_state.chat_history.append(("Bot", answer))
+            # -------------------------
+            # SMART RAG MODE
+            # -------------------------
+            else:
+                # 🔥 QUERY REWRITING (KEY FEATURE)
+                rewrite_prompt = f"""
+Rewrite the user's question into a standalone question.
 
-            if context:
-                with st.expander("🔍 Retrieved Context"):
-                    st.write(context)
+Conversation:
+{conversation}
 
-for role, msg in st.session_state.chat_history:
-    if role == "You":
-        st.chat_message("user").write(msg)
+Question:
+{user_query}
+"""
+
+                rewritten_query = llm.invoke(rewrite_prompt).content
+
+                # Debug (optional)
+                st.caption(f"🔍 Rewritten query: {rewritten_query}")
+
+                # Retrieval
+                relevant_docs = retriever.invoke(rewritten_query)
+
+                context = ""
+                sources = set()
+
+                for doc in relevant_docs:
+                    src = doc.metadata.get("source", "Unknown")
+                    sources.add(src)
+                    context += f"\n\nSOURCE: {src}\n{doc.page_content}"
+
+                # Final Answer
+                response = llm.invoke(f"""
+You are a smart assistant.
+
+Use:
+1. Conversation (for continuity)
+2. Document context (primary source)
+
+Be:
+- clear
+- conversational
+- helpful
+
+If answer is not fully in context, explain what is missing.
+
+Conversation:
+{conversation}
+
+Context:
+{context}
+
+Question:
+{user_query}
+""")
+
+                answer = response.content
+
+                st.caption("📚 Sources: " + ", ".join(sorted(sources)))
+
+        # Save assistant message
+        st.session_state.messages.append({"role": "assistant", "content": answer})
+
+# -------------------------
+# Display Chat
+# -------------------------
+for msg in st.session_state.messages:
+    if msg["role"] == "user":
+        st.chat_message("user").write(msg["content"])
     else:
-        st.chat_message("assistant").write(msg)
-
-if not uploaded_file:
-    st.info("👆 Upload a PDF to begin")
+        st.chat_message("assistant").write(msg["content"])
